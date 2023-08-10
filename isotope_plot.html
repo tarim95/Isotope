@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>JavaScript Plot Example</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Load plotly.js into the DOM -->
+  <script src='https://cdn.plot.ly/plotly-2.24.1.min.js'></script>
+
+  <style>
+    /* Style for the container div */
+    .container {
+      position: relative;
+    }
+
+
+    /* Style for the div you want to position on top of the canvas */
+    .banana1 {
+      position: absolute;
+      top: 50px;
+      left: 300px;
+      background-color: rgba(0, 0, 0, 1);
+      padding: 1px;
+      color: white;
+      width: 400px;
+      height: 400px;
+    }
+
+    .banana2 {
+      position: absolute;
+      top: 50px;
+      left: 800px;
+      background-color: rgba(0, 0, 0, 1);
+      padding: 1px;
+      color: white;
+      width: 400px;
+      height: 400px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div>
+    <div id="text_div" background-color="color:red">
+      <canvas id="text"></canvas>
+    </div>
+
+    <canvas id="myCanvas"></canvas>
+    <div class="banana1" id='banana1'><!-- Plotly chart will be drawn inside this DIV --></div>
+    <div class="banana2" id='banana2'><!-- Plotly chart will be drawn inside this DIV --></div>
+
+    <button style="position: absolute; top: 900px; left: 1000px" onclick="clearCanvas()">
+      clear
+    </button>
+  </div>
+
+  <script>
+    var line_isDrawen = 0;        //checks if there is already a line drawen or not
+    var bananaPlot_isDrawen = 0;  //checks if there is already data plotted to the banana plots
+    var Banana_al = [];
+    var Banana_be = [];
+    var Banana_ne = [];
+    var al_be = [];
+    var ne_be = [];
+    var Banana_time = [];
+
+    const canvas = document.getElementById("myCanvas");
+    const context = canvas.getContext("2d");
+
+    const text_div = document.getElementById("text_div");
+    text_div.width = window.innerWidth;
+    text_div.height = 1000;
+
+    const canvas_text = document.getElementById("text");
+    const context_text = canvas_text.getContext("2d");
+    context_text.width = text_div.width;
+    context_text.height = text_div.height;
+
+
+
+    let mouse_pos = NaN;
+    let mouse_pos_old = NaN;
+    canvas.addEventListener("click", (event) => {
+
+      mouse_pos_old = mouse_pos;
+      mouse_pos = getMousePos(canvas, event);
+
+      console.log("mouse now: ", mouse_pos);
+      console.log("mouse old: ", mouse_pos_old);
+
+      if (
+        0 <= mouse_pos.x &&
+        mouse_pos.x <= 900 &&
+        0 <= mouse_pos.y &&
+        mouse_pos.y <= 300
+      ) {
+        //draw Circle
+        context.beginPath();
+        context.arc(mouse_pos.x + 100, mouse_pos.y + 300, 10, 0, 2 * Math.PI);
+        context.stroke();
+
+        //draw Line
+        drawLine(mouse_pos);
+
+        //calc N
+        N = N_concentration(mouse_pos, mouse_pos_old);
+        if (typeof N != "undefined") {
+          draw_Banana(N);
+        }
+        console.log("N: ", N)
+        console.log("Case: ", 1)
+      } else if (
+        300 <= mouse_pos.y &&
+        mouse_pos.y <= 400 &&
+        mouse_pos.x <= 900
+
+      ) {
+        //draw Circle
+        context.beginPath();
+        context.arc(mouse_pos.x + 100, 600, 10, 0, 2 * Math.PI);
+        context.stroke();
+
+        mouse_pos.y = 300
+        //draw Line
+        drawLine(mouse_pos);
+
+        //calc N
+        N = N_concentration(mouse_pos, mouse_pos_old);
+        if (typeof N != "undefined") {
+          draw_Banana(N);
+        }
+        console.log("N: ", N)
+        console.log("Case: ", 2)
+      } else if (
+        300 <= mouse_pos.y &&
+        900 <= mouse_pos.x
+
+      ) {
+        //draw Circle
+        context.beginPath();
+        context.arc(1000, 600, 10, 0, 2 * Math.PI);
+        context.stroke();
+
+        mouse_pos.x = 900;
+        mouse_pos.y = 300;
+        //draw Line
+        drawLine(mouse_pos);
+
+        //calc N
+        N = N_concentration(mouse_pos, mouse_pos_old);
+        if (typeof N != "undefined") {
+          draw_Banana(N);
+        }
+        console.log("N: ", N)
+        console.log("Case: ", 3)
+      } else if (
+        0 <= mouse_pos.y &&
+        mouse_pos.y <= 300 &&
+        900 <= mouse_pos.x
+
+      ) {
+        //draw Circle
+        context.beginPath();
+        context.arc(1000, mouse_pos.y + 300, 10, 0, 2 * Math.PI);
+        context.stroke();
+
+        mouse_pos.x = 900
+        //draw Line
+        drawLine(mouse_pos);
+
+
+        //calc N
+        N = N_concentration(mouse_pos, mouse_pos_old);
+        if (typeof N != "undefined") {
+          draw_Banana(N);
+        }
+        console.log("N: ", N)
+        console.log("Case: ", 4)
+      }
+    });
+
+    canvas.addEventListener("mousemove", (event) => {
+      const mouse_pos = getMousePos(canvas, event);
+
+      if (
+        0 <= mouse_pos.x &&
+        mouse_pos.x <= 1000 &&
+        0 <= mouse_pos.y &&
+        mouse_pos.y <= 400
+      ) {
+        context.save();
+        context.transform(1, 0, 0, -1, 0, canvas.height);
+        context.clearRect(105, 300, 300, 80);
+        context.font = "bold 18px Arial";
+        context.fillText("Time: " + String(Math.round(mouse_pos.x)), 105, 380);
+        context.fillText(
+          "Ground: " + String(-10 + Math.round(mouse_pos.y / 30)),
+          200,
+          380
+        );
+        context.restore();
+      }
+    });
+
+    // Set up the axes
+    canvas.width = window.innerWidth;
+    canvas.height = 1000;
+    context.transform(1, 0, 0, -1, 0, canvas.height);
+    const centerX = canvas.width / 2;
+    const centerY = 500;
+    let scale = 1;
+    let offset = 0;
+
+    // Draw the plot
+    function drawPlot() {
+      console.log(scale);
+      // Clear the canvas
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      context_text.fillStyle = "white";
+      context_text.font = "bold 18px Arial";
+      context_text.strokeText("Text", 200, 300);
+
+      context_text.fillStyle = "white";
+      context_text.font = "bold 18px Arial";
+      context_text.strokeText("Text", 200, 400);
+
+      let time_ground_X = 100;
+      let time_ground_Y = 300;
+
+      context.strokeStyle = "black";
+      context.strokeRect(time_ground_X, time_ground_Y, 900, 300);
+
+      /*
+      context.strokeStyle = "black";
+      context.strokeRect(500, 700, 250, 250);
+
+      context.strokeStyle = "black";
+      context.strokeRect(800, 700, 250, 250);
+
+
+      // Draw the plot using the current scale
+      context.save();
+      //context.scale(scale, scale);
+
+      //Plot first banana
+      context.beginPath();
+      for (let x = -500; x <= 500; x++) {
+        const y = 600 + x ** 2;
+        if (x === 0) {
+          context.moveTo(850 + x * scale, 100 + y);
+        } else if (800 + x * scale < 1050) {
+          context.lineTo(850 + x * scale, 100 + y);
+        }
+      }
+      context.stroke();
+
+      //Plot seccond banana
+      for (let x = 0; x <= 100; x++) {}
+
+      // Plot the function
+      context.beginPath();
+      context.strokeStyle = "red";
+
+      for (let x = 0; x <= canvas.width / 2; x++) {
+        const y = Math.sin(x / 20) * 30;
+        if (x === -canvas.width / 2) {
+          context.moveTo(100 + x * scale, y);
+        } else {
+          if (100 + x * scale < 1000) {
+            context.lineTo(100 + x * scale, 400 + y);
+          }
+        }
+      }
+      context.stroke();
+      */
+      context.restore();
+    }
+
+    function draw_Banana(data) {
+
+      console.log("data: ", data);
+
+      al = data.al;
+      be = data.be;
+      ne = data.ne;
+      t = data.time;
+      console.log("time: ", Banana_time)
+
+      Banana_al.push(al);
+      Banana_be.push(be);
+      Banana_ne.push(ne);
+
+      al_be.push(al / be);
+      ne_be.push(ne / be);
+      Banana_time.push(t);
+
+      console.log("al_be: ", data.al)
+
+      var trace1 = {
+        x: Banana_be,//Banana_be,
+        y: al_be,//al_be,
+        type: 'scatter'
+      };
+
+      var trace2 = {
+        x: Banana_be,//,
+        y: ne_be,//ne_be,
+        type: 'scatter'
+      };
+
+      var data1 = [trace1];
+      var data2 = [trace2];
+
+      var layout1 = {
+        xaxis: {
+          title: 'Beryllium'
+        },
+        yaxis: {
+          title: 'Al / Be' // Add y-axis label here
+        },
+        title: {
+          text: 'Banana Plots', // Add the title here
+          x: 0.5 // Adjust the x position of the title
+        }
+      };
+
+      var layout2 = {
+        xaxis: {
+          title: 'Beryllium'
+        },
+        yaxis: {
+          title: 'Ne / Be' // Add y-axis label here
+        },
+        title: {
+          text: 'Banana Plots', // Add the title here
+          x: 0.5 // Adjust the x position of the title
+        }
+      };
+
+
+
+
+      console.log("window.bananaPlot: ", bananaPlot_isDrawen)
+      if (bananaPlot_isDrawen == 0) {
+        Plotly.newPlot('banana1', data1, layout1);
+        Plotly.newPlot('banana2', data2, layout2);
+        bananaPlot_isDrawen = 1;
+        console.log("new PLot");
+      } else {
+        Plotly.update('banana1', data1, layout1);
+        Plotly.update('banana2', data2, layout2);
+        console.log("update PLot")
+      }
+
+    }
+
+    function initializeBananas() {
+
+      var trace1 = {
+        x: [],//Banana_be,
+        y: [],//al_be,
+        type: 'scatter'
+      };
+
+
+      var trace2 = {
+        x: [],//,
+        y: [],//ne_be,
+        type: 'scatter'
+      };
+
+      var data1 = [trace1];
+      var data2 = [trace2];
+
+      var layout1 = {
+        xaxis: {
+          title: 'Beryllium'
+        },
+        yaxis: {
+          title: 'Al / Be' // Add y-axis label here
+        },
+        title: {
+          text: 'Banana Plots', // Add the title here
+          x: 0.5 // Adjust the x position of the title
+        }
+      };
+
+      var layout2 = {
+        xaxis: {
+          title: 'Beryllium'
+        },
+        yaxis: {
+          title: 'Ne / Be' // Add y-axis label here
+        },
+        title: {
+          text: 'Banana Plots', // Add the title here
+          x: 0.5 // Adjust the x position of the title
+        }
+      };
+
+      Plotly.newPlot('banana1', data1, layout1);
+      Plotly.newPlot('banana2', data2, layout2);
+
+    }
+
+    // Draw the timeline
+    function drawTimeline() {
+      context.beginPath();
+      for (let x = 1; x < 100; x++) {
+        y = 300;
+
+        if (100 + x * scale * 10 < 1000) {
+          if (x % 10 == 0) {
+            context.moveTo(100 + x * scale * 10, y);
+            context.lineTo(100 + x * 10 * scale, y + 30);
+          } else if (x % 5 == 0) {
+            context.moveTo(100 + x * scale * 10, y);
+            context.lineTo(100 + x * scale * 10, y + 20);
+          } else {
+            context.moveTo(100 + x * scale * 10, y);
+            context.lineTo(100 + x * scale * 10, y + 10);
+          }
+        }
+      }
+
+      context.stroke();
+    }
+
+    // Draw the ground
+    function drawGroundline() {
+      context.beginPath();
+      for (let y = 1; y < 10; y++) {
+        context.moveTo(100, 300 + y * 30);
+        context.lineTo(100 + 30, 300 + y * 30);
+      }
+
+      context.stroke();
+    }
+
+
+
+
+
+
+
+
+    // Draw the initial plot
+    drawPlot();
+    drawTimeline();
+    drawGroundline();
+    drawArrowheadLeft(1100, 300);
+    drawArrowheadUp(100, 700);
+    initializeBananas();
+    drawInitialLines();
+    /*
+    if (typeof N != "undefined") {
+      draw_Banana(N);
+    }*/
+
+    function drawInitialLines() {
+      context.beginPath();
+      context.moveTo(100, 300);
+      context.lineTo(100, 700);
+      context.stroke();
+
+      context.beginPath();
+      context.moveTo(100, 300);
+      context.lineTo(1100, 300);
+      context.stroke();
+    }
+
+    function drawArrowheadLeft(xx, yy) {
+      let x = xx;
+      let y = yy;
+      context.beginPath();
+      context.moveTo(x, y + 5);
+      context.lineTo(x, y - 5);
+      context.lineTo(x + 10, y);
+      context.closePath();
+
+      // the fill color
+      context.fillStyle = "#black";
+      context.fill();
+
+      // the outline
+      context.strokeStyle = "black";
+      context.stroke();
+    }
+
+    function drawArrowheadUp(xx, yy) {
+      let x = xx;
+      let y = yy;
+      context.beginPath();
+      context.moveTo(x - 5, y);
+      context.lineTo(x + 5, y);
+      context.lineTo(x, y + 10);
+      context.closePath();
+
+      // the fill color
+      context.fillStyle = "#black";
+      context.fill();
+
+      // the outline
+      context.strokeStyle = "black";
+      context.stroke();
+    }
+
+    function getMousePos(canvas, evt) {
+      var rect = canvas.getBoundingClientRect();
+
+      return {
+        x: evt.clientX - rect.left - 100,
+        y: canvas.height - (evt.clientY - rect.top) - 300,
+      };
+    }
+
+    function drawLine(pos) {
+      const mouse_pos = pos;
+      context.beginPath();
+      if (line_isDrawen == 1) {
+        context.moveTo(window.last_x_pos + 100, window.last_y_pos + 300);
+        context.lineTo(mouse_pos.x + 100, mouse_pos.y + 300);
+      } else {
+        context.moveTo(100, 300);
+        context.lineTo(mouse_pos.x + 100, mouse_pos.y + 300);
+        line_isDrawen = 1;
+      }
+      window.last_x_pos = mouse_pos.x;
+      window.last_y_pos = mouse_pos.y;
+
+      context.stroke();
+    }
+
+    function clearCanvas() {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      drawPlot();
+      drawTimeline();
+      drawGroundline();
+      drawArrowheadLeft(1000, 300);
+      drawArrowheadUp(100, 600);
+
+      //drawInitialLines();
+      line_isDrawen = 0;
+      bananaPlot_isDrawen = 0;
+
+      // Clear data arrays by updating the global arrays
+      Banana_al.length = 0;
+      Banana_be.length = 0;
+      Banana_ne.length = 0;
+      al_be.length = 0;
+      ne_be.length = 0;
+      Banana_time.length = 0;
+
+      //clear PLotly figure
+      const plotContainer_banana1 = document.getElementById('banana1');
+      const plotContainer_banana2 = document.getElementById('banana2');
+      Plotly.purge(plotContainer_banana1);
+      Plotly.purge(plotContainer_banana2);
+
+      initializeBananas()
+    }
+
+    function N_concentration(coords, coords_old) {
+
+      time = coords.x;
+      console.log("Time: ", time)
+      deph = -coords.y / 30;
+
+      t = time * 10000//100;
+      year = 1;
+      Prod_ne = 16.8 / year;         //....production rate in Atom/g/year
+      Prod_be = 4 / year;             // ....production rate in Atom/g/year
+      Prod_al = 30 / year;            // ....production rate in Atom/g/year
+
+      lam_ne = 0;                   // ....decay const Ne  ????              ......)
+      lam_be = 4.56 * (10 ** -7) / year;     // ....decay const (half life Be 1.51*ma)......)
+      lam_al = 9.8 * (10 ** -7) / year;      //.....decay const (half life Al 0.71*ma)......)
+
+      rho = 2.65;                 //.....density in g/cm^3..........)
+      a_0 = 160;                  //.....attenuiation length scale neutrons in g/cm^2...)
+
+      eps = (10 + deph) / (coords.x - coords_old.x);            //erosion rate
+      console.log("deph: ", deph + 10)
+      console.log("t: ", t)
+      tau = 0;
+
+      if (eps == 0) {
+        N_ne = Prod_ne * t;
+        N_be = (Prod_be / lam_be) * (1 - Math.exp(-lam_be * t));
+        N_al = (Prod_al / lam_al) * (1 - Math.exp(-lam_al * t));
+      } else {
+        N_ne = (Prod_ne / (lam_ne + rho * eps / a_0)) * (1 - Math.exp(-(lam_ne + (rho * eps / a_0)) * t)) * (Math.exp(-lam_ne * tau));
+        N_be = (Prod_be / (lam_be + rho * eps / a_0)) * (1 - Math.exp(-(lam_be + (rho * eps / a_0)) * t)) * (Math.exp(-lam_be * tau));
+        N_al = (Prod_al / (lam_al + rho * eps / a_0)) * (1 - Math.exp(-(lam_al + (rho * eps / a_0)) * t)) * (Math.exp(-lam_al * tau));
+      }
+
+
+
+      //console.log((Prod_ne/(lam_be + rho*eps/a_0)))
+      console.log("eps: ", eps)
+
+      N = {
+        "ne": N_ne,
+        "be": N_be,
+        "al": N_al,
+        "al/be": N_al / N_be,
+        "ne/be": N_ne / N_be,
+        "time": t
+      }
+
+      banana1 = N_al / N_be
+      banana2 = N_ne / N_be
+
+      return N;
+
+    }
+
+
+  </script>
+</body>
+
+</html>
